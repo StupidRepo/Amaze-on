@@ -38,8 +38,7 @@ func main() {
 		go func(start, end uint64) {
 			defer wg.Done()
 
-			var buffer []string
-			const writeInterval = 500000
+			const interval = 250_000
 
 			for i := start; i <= end; i++ {
 				activationHex := fmt.Sprintf("%08x", i)
@@ -48,24 +47,16 @@ func main() {
 					continue
 				}
 
-				// Collect lines in a buffer instead of writing directly to file
-				buffer = append(buffer, fmt.Sprintf("%s:%s\n", activationHex, checksum))
+				// Write to file
+				fmt.Fprintf(f, "%s:%s\n", activationHex, checksum)
 
-				// Write them every 100,000 iterations
-				if i%writeInterval == 0 {
-					for _, line := range buffer {
-						fmt.Fprint(f, line)
-					}
-					buffer = buffer[:0]
+				// Periodic progress update
+				if i%interval == 0 {
 					fmt.Printf("[Worker %d] Time elapsed: %s, Progress: %.2f%%\n", w, time.Since(startTime), float64(i)/float64(end)*100)
 				}
 			}
 
-			// Flush any remaining lines
-			for _, line := range buffer {
-				fmt.Fprint(f, line)
-			}
-
+			// Final progress update
 			fmt.Printf("[Worker %d] Finished processing range %08x to %08x\n", w, start, end)
 		}(start, end)
 	}
